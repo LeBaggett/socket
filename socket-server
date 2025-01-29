@@ -1,0 +1,69 @@
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+int main(){
+    char server_message[1024], message_client[1024];
+    int server_socket;
+
+    // Criar o socket do servidor
+    server_socket = socket(AF_INET, SOCK_STREAM, 0);
+
+    struct sockaddr_in server_address;
+    server_address.sin_family = AF_INET;
+    server_address.sin_port = htons(9002);
+    // server_address.sin_addr.s_addr = INADDR_ANY;
+    server_address.sin_addr.s_addr = inet_addr("127.0.0.1"); // Endereço IP do servidor
+
+    // Vincular o socket do servidor ao endereço e porta especificados
+    bind(server_socket, (struct sockaddr*) &server_address, sizeof(server_address));
+
+    // Aguardar conexões de clientes
+    listen(server_socket, 5);
+
+    int client_socket;
+    // Aceitar a conexão do cliente
+    client_socket = accept(server_socket, NULL, NULL);
+
+    // Enviar mensagem para o cliente
+    send(client_socket, server_message, sizeof(server_message), 0);
+
+    char client_message[1024];
+    char server_response[1024];
+    // memset(client_message, 0, sizeof(client_message));
+
+    while (1) {
+        
+        // Enviar mensagem para o cliente
+        if (send(client_socket, server_response, strlen(server_response), 0) < 0){
+            printf("Não foi possível enviar a mensagem\n");
+            break;
+        }
+
+        // Receber mensagem do cliente
+        if (recv(client_socket, client_message, sizeof(client_message), 0) <= 0) {
+            printf("Erro ao receber mensagem do cliente\n");
+            break;
+        } else {
+            printf("Mensagem do cliente: %s\n", client_message);
+            // Verificar se o cliente enviou a mensagem para fechar a conexão
+            if (strcmp(client_message, "close\n") == 0) {
+                printf("Fechando a conexão\n");
+                break;
+            }
+        }
+        // Solicitar mensagem para enviar ao cliente
+        printf("Digite a mensagem para enviar ao cliente: ");
+        fgets(server_response, sizeof(server_response), stdin);
+        
+        memset(client_message, 0, sizeof(client_message));
+    }
+
+    // Fechar os sockets
+    close(client_socket);
+    close(server_socket);
+
+    return 0;
+}
