@@ -1,0 +1,73 @@
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+int main()
+{
+    // Criar um socket
+    int network_socket;
+    network_socket = socket(AF_INET, SOCK_STREAM, 0);
+
+    char message_client[1024], message_server[1024];
+
+    struct sockaddr_in server_address;
+    server_address.sin_family = AF_INET;
+    server_address.sin_port = htons(9002);
+    // server_address.sin_addr.s_addr = INADDR_ANY;
+    server_address.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    // Conectar ao servidor
+    int connection_status = connect(network_socket, (struct sockaddr *)&server_address, sizeof(server_address));
+
+    if (connection_status == -1)
+    {
+        printf("Ocorreu um erro ao conectar ao socket remoto\n\n");
+        exit(EXIT_FAILURE);
+    }
+
+    char server_response[1024];
+
+    // Receber a mensagem inicial do servidor
+    recv(network_socket, server_response, sizeof(server_response), 0);
+
+    while (1)
+    {
+
+        // Enviar mensagem para o servidor
+        if (send(network_socket, message_client, strlen(message_client), 0) < 0)
+        {
+            printf("Não foi possível enviar a mensagem\n");
+            break;
+        }
+
+        // Verificar se a mensagem é para fechar a conexão
+        if (strcmp(message_client, "close\n") == 0)
+        {
+            printf("Enviada mensagem de fechar. Fechando a conexão.\n");
+            break;
+        }
+
+        // Limpar o buffer para receber a resposta do servidor
+        memset(message_server, 0, sizeof(message_server));
+
+        // Receber a resposta do servidor
+        if (recv(network_socket, server_response, sizeof(server_response), 0) <= 0)
+        {
+            printf("Erro ao receber mensagem do servidor\n");
+            break;
+        }
+        else
+        {
+            printf("Mensagem do servidor: %s\n", server_response);
+        }
+        // Solicitar mensagem para enviar ao servidor
+        printf("Digite a mensagem para o servidor: ");
+        fgets(message_client, sizeof(message_client), stdin);
+    }
+
+    // Fechar o socket
+    close(network_socket);
+    return 0;
+}
